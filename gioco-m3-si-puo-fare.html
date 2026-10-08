@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>M3 · Si può fare?</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#e9edf2;font-family:"Segoe UI",Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}
+  #game{position:relative;width:800px;height:550px;background:#f7f9fb;border-radius:10px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.15)}
+  header{height:56px;background:#1f3a5f;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 18px}
+  header h1{font-size:18px;font-weight:600}
+  header .score{font-size:13px;background:rgba(255,255,255,.15);padding:5px 12px;border-radius:14px}
+  #progress{height:6px;background:#dbe3ec}#bar{height:6px;background:#0f8b8d;width:0;transition:width .3s}
+  #stage{padding:18px 28px}
+  .num{font-size:13px;color:#5b6f84;margin-bottom:6px}
+  #scenario{background:#fff;border:1px solid #c9d3de;border-left:6px solid #1f3a5f;border-radius:8px;padding:16px 18px;font-size:16px;line-height:1.45;color:#1f2d3d;min-height:104px;display:flex;align-items:center}
+  #options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  .opt{background:#fff;border:2px solid #b8c4d2;border-radius:8px;padding:12px 14px;font-size:14.5px;color:#1f2d3d;cursor:pointer;text-align:left}
+  .opt:hover{border-color:#0f8b8d}
+  .opt.right{border-color:#2e7d32;background:#eef7ee}
+  .opt.wrong{border-color:#c62828;background:#fdecea}
+  .opt:disabled{cursor:default}
+  #fb{margin-top:14px;background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.45;color:#1f2d3d;min-height:84px;display:none}
+  #fb.ok{display:block;border-left:5px solid #2e7d32}#fb.ko{display:block;border-left:5px solid #c62828}
+  #fb .ch{margin-top:4px;color:#1f3a5f;font-weight:600}
+  #next{position:absolute;right:28px;bottom:18px;background:#0f8b8d;color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:14px;cursor:pointer;display:none}
+  #overlay{position:absolute;inset:0;z-index:100;background:rgba(31,58,95,.95);color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px}
+  #overlay h2{font-size:26px;margin-bottom:12px}
+  #overlay p{font-size:15px;max-width:580px;line-height:1.5;margin-bottom:8px}
+  #overlay button{margin-top:16px;background:#0f8b8d;color:#fff;border:none;border-radius:6px;padding:10px 22px;font-size:15px;cursor:pointer}
+  header .right{display:flex;align-items:center;gap:8px}
+  .hb{background:transparent;border:1px solid rgba(255,255,255,.65);color:#fff;border-radius:6px;padding:5px 11px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .hb:hover{background:rgba(255,255,255,.18)}
+</style>
+</head>
+<body>
+<div id="game">
+  <header><h1>Si può fare?</h1><div class="right"><div class="score">Risposte corrette: <span id="score">0</span>/8</div><button type="button" class="hb" onclick="init()">Ricomincia</button><button type="button" class="hb" onclick="window.close()">Torna al corso</button></div></header>
+  <div id="progress"><div id="bar"></div></div>
+  <div id="stage">
+    <div class="num" id="num"></div>
+    <div id="scenario"></div>
+    <div id="options"></div>
+    <div id="fb"></div>
+  </div>
+  <button id="next">Avanti</button>
+  <div id="overlay">
+    <h2>Fine delle situazioni</h2>
+    <p id="result"></p>
+    <p>Quando un sistema tocca i diritti dei lavoratori, l'RLS può chiedere informazioni, portare il tema all'azienda e indirizzare i colleghi al canale giusto: RSU o RSA, responsabile della protezione dei dati, medico competente, Garante, Ispettorato.</p>
+    <button onclick="init()">Ricomincia</button>
+  </div>
+</div>
+<script>
+const OPTS=["Lecito","Serve accordo o autorizzazione","Serve la decisione di una persona","Vietato"];
+const Q=[
+ {s:"In reparto vengono installate telecamere che verificano l'uso del casco. L'azienda non ha firmato alcun accordo con la RSU né chiesto l'autorizzazione all'Ispettorato.",a:1,f:"Uno strumento che consente anche il controllo a distanza dei lavoratori si installa dopo un accordo con RSA o RSU oppure, in mancanza, con l'autorizzazione dell'Ispettorato (art. 4 dello Statuto dei lavoratori), anche se la finalità è la sicurezza.",c:"A chi rivolgersi: RSA o RSU; Ispettorato nazionale del lavoro."},
+ {s:"I carrelli elevatori montano un sistema che rileva i segni del colpo di sonno e avvisa il conducente. Accordo firmato e informativa consegnata prima dell'avvio.",a:0,f:"Stanchezza e sonnolenza sono stati fisici, esclusi dal divieto di riconoscere le emozioni. Con accordo e informativa preventiva il sistema è lecito e protegge il conducente.",c:"Da verificare: finalità limitata alla sicurezza e dati trattati in modo proporzionato."},
+ {s:"Un software analizza la voce dei dipendenti durante le riunioni per misurarne lo stress e il benessere.",a:3,f:"Dedurre le emozioni dei lavoratori dalla voce è una pratica vietata dall'AI Act dal 2 febbraio 2025. Il monitoraggio di stress o benessere resta fuori dall'eccezione per motivi di sicurezza.",c:"A chi rivolgersi: responsabile della protezione dei dati; Garante per la protezione dei dati personali."},
+ {s:"L'algoritmo propone il licenziamento di un addetto per bassa produttività. Il responsabile firma la lettera senza esaminare il caso né sentire il lavoratore.",a:2,f:"Le decisioni sul rapporto di lavoro spettano a una persona che esamina il caso: lo prevede il GDPR (art. 22). Il decreto attuativo della L. 132/2025 approvato il 4 agosto 2026, in attesa di pubblicazione, prevede la nullità del licenziamento deciso così.",c:"A chi rivolgersi: il lavoratore può chiedere la spiegazione e impugnare; Ispettorato e organizzazioni sindacali."},
+ {s:"I dati GPS raccolti per localizzare chi lavora da solo, dichiarati nell'informativa per la sola sicurezza, vengono usati per contestare a un lavoratore la durata delle pause.",a:3,f:"I dati raccolti per la sicurezza restano legati a quella finalità. Usarli per contestare le pause contrasta con la finalità dichiarata e con i principi del GDPR: è un trattamento illecito.",c:"A chi rivolgersi: responsabile della protezione dei dati; Garante; RSA o RSU."},
+ {s:"Il sistema delle presenze applica in automatico una sanzione disciplinare a chi timbra in ritardo tre volte nel mese.",a:2,f:"Una sanzione disciplinare è una decisione con effetti significativi sul lavoratore: deve adottarla una persona, dopo aver esaminato il caso e ascoltato l'interessato.",c:"A chi rivolgersi: ufficio del personale; responsabile della protezione dei dati; RSA o RSU."},
+ {s:"In magazzino è attiva una videoanalisi che segnala le persone vicine ai carrelli. Accordo firmato con la RSU, volti mascherati, informativa consegnata prima dell'avvio.",a:0,f:"Accordo, informativa preventiva e minimizzazione dei dati con i volti mascherati: il sistema rispetta le regole e svolge una funzione di sicurezza.",c:"Da verificare nel tempo: falsi allarmi, aree coperte, uso dei dati limitato alla sicurezza."},
+ {s:"Ai lavoratori isolati vengono consegnati dispositivi indossabili con geolocalizzazione. L'azienda ha consegnato solo l'informativa.",a:1,f:"Un dispositivo che localizza il lavoratore consente il controllo a distanza: oltre all'informativa servono l'accordo con RSA o RSU oppure l'autorizzazione dell'Ispettorato.",c:"A chi rivolgersi: RSA o RSU; Ispettorato nazionale del lavoro."}
+];
+let order,k,score;
+const $=id=>document.getElementById(id);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function init(){order=shuffle(Q.map((_,i)=>i));k=0;score=0;$('score').textContent=0;$('overlay').style.display='none';show();}
+function show(){
+  const q=Q[order[k]];
+  $('num').textContent='Situazione '+(k+1)+' di '+Q.length;
+  $('bar').style.width=(k/Q.length*100)+'%';
+  $('scenario').textContent=q.s;
+  $('fb').className='';$('fb').innerHTML='';$('next').style.display='none';
+  const O=$('options');O.innerHTML='';
+  OPTS.forEach((o,i)=>{const b=document.createElement('button');b.className='opt';b.textContent=o;b.onclick=()=>answer(i);O.appendChild(b);});
+}
+function answer(i){
+  const q=Q[order[k]],btns=document.querySelectorAll('.opt');
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add('right');
+  if(i===q.a){score++;$('score').textContent=score;$('fb').className='ok';}
+  else{btns[i].classList.add('wrong');$('fb').className='ko';}
+  $('fb').innerHTML=(i===q.a?'<b>Corretto.</b> ':'<b>La risposta è: '+OPTS[q.a]+'.</b> ')+q.f+'<div class="ch">'+q.c+'</div>';
+  $('next').textContent=k===Q.length-1?'Vedi il risultato':'Avanti';
+  $('next').style.display='block';
+}
+$('next').onclick=()=>{k++;if(k<Q.length)show();else{$('bar').style.width='100%';$('result').textContent='Hai risposto correttamente a '+score+' situazioni su 8.';$('overlay').style.display='flex';}};
+init();
+</script>
+</body>
+</html>
